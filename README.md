@@ -19,23 +19,34 @@ Alle Schritte sind in Jupyter-Notebooks dokumentiert und versioniert.
 ---
 
 ## 2 Ordnerstruktur 
-vocdata/
-├─ data/ # Roh- & Staging-Daten (.xlsx, .csv, .parquet, …)
-│ └─ .gitkeep
-├─ etl/ # Python-Skripte für Lade- & Update-Jobs
-│ ├─ 05_load_facts_lva.py
-│ ├─ 06_load_abschluss_stats.py
-│ └─ 08_fk_updates.py
-├─ notebooks/ # Explorative Analysen & Data-Quality
-│ ├─ 01_poc_overview.ipynb
-│ └─ 09_c_quality_audits.ipynb
-├─ .env.example # DB-Credentials (niemals committen!)
-├─ requirements.txt
-└─ README.md
+vvocdata/
+├── data/                # Roh-Excel & CSV-Quellen
+├── tmp/                 # Parquet-Staging + Audit-CSVs
+├── uploads/
+│   └── pdf/             # Manuell hochgeladene PDF-Dokumente
+├── notebooks/
+│   01a_profile_lva.ipynb
+│   01b_profile_abschluss.ipynb
+│   02a_clean_lva.ipynb
+│   02b_clean_abschluss.ipynb
+│   04a_load_facts_lva.ipynb
+│   04b_load_facts_abschluss.ipynb
+│   05_fk_updates.ipynb
+│   06a_lva_audit.ipynb
+│   06b_abs_audit.ipynb
+│   07a_lva_quality.ipynb
+│   07b_abs_quality.ipynb
+│   90_qual_text_search.ipynb      # NEU: ChatGPT-Suche / Zusammenfassung
+├── scripts/
+│   pdf_ingest.py          # PDF → Text → qual_docs-Tabelle
+│   etl_qual_docs.py       # Hilfsfunktionen für Text-ETL
+│   db_models.py           # SQLAlchemy-ORM (Dim/Facts/qual_docs)
+│   config.py              # Liest .env (OpenAI-Key, DB-Creds)
+├── tests/                 # (optional) kleine Py-Tests für ETL-Funktionen
+├── .env                   # **nicht committen** – API-Keys, DB-Passwörter
+├── .gitignore
+└── README.md
 
-yaml
-Kopieren
-Bearbeiten
 
 
 
@@ -103,3 +114,126 @@ Abschlussquoten 2022 (blau)
 8 Lizenz
 Nur für Lehr- und Forschungszwecke der ZHAW; Rohdaten © BFS.
 Quellcode unter MIT-Lizenz.
+
+
+
+
+
+_____
+PDF-Upload & Ingestion – 3 – 4 h
+
+ETL-Pipeline qualitative Texte (qual_docs) – 1 – 2 h
+
+ChatGPT-Integration für Textanalyse – 1 – 2 h
+
+Such-/Zusammenfassungsfunktion in Jupyter – 2 – 3 h
+
+
+
+PDF-Upload & Ingestion
+# Implementierung & Technische Entscheidungen (Stand MVP)
+
+## 1 Conda-Umgebung `vocdata` aktiviert
+
+* **Ziel / Problem** Reproduzierbare Laufzeit für alle ETL-Skripte.
+* **Begründung** Conda bietet paketgenaue Isolation; Umgebung war bereits vorbereitet.
+* **Ergebnis / Nachweis** Nach `conda activate vocdata` erscheint der Prompt `(vocdata)`.
+
+---
+
+## 2 Installation **PyPDF2**
+
+* **Ziel** Textextraktion aus PDFs für den Import qualitativer Quellen.
+* **Begründung** Reine-Python-Bibliothek, keine externen Services nötig, schnell genug für Klartext.
+  *Alternativen:* pdfminer (langsamer) oder Apache Tika (Java-Abhängigkeit) – verworfen.
+* **Ergebnis** `pip install PyPDF2` → *Successfully installed PyPDF2-3.0.1*.
+
+---
+
+## 3 Ordner *uploads*, *uploads/pdf*, *scripts* angelegt
+
+* **Ziel** Saubere Trennung zwischen Roh-Uploads und wieder­verwendbarem Code.
+* **Begründung** Verhindert Datenchaos, erleichtert Git-Diffs.
+* **Ergebnis** Ordner committed (Git-Hash `dc51e19`).
+
+---
+
+## 4 Beispiel-PDFs hinzugefügt
+
+Acht PDFs unter *uploads/pdf/* als Testmaterial für ETL und spätere NLP-Analyse.
+
+---
+
+## 5 MySQL-Tabelle `qual_docs` erstellt
+
+```sql
+CREATE TABLE IF NOT EXISTS vocdata.qual_docs (
+    doc_id    INT AUTO_INCREMENT PRIMARY KEY,
+    filename  VARCHAR(255) NOT NULL,
+    title     VARCHAR(255),
+    year      SMALLINT,
+    full_text LONGTEXT,
+    added_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+* **Ziel** Zentrale Ablage aller PDF-Volltexte – Basis für Suche / LLM.
+* **Begründung** Einfaches Schema mit AUTO\_INCREMENT-PK; `LONGTEXT` deckt große Studien ab.
+* **Ergebnis** MySQL meldet *Query OK*.
+
+---
+
+## 6 Skript `scripts/pdf_ingest.py` erstellt
+
+* **Ziel** Automatisierte Ingestion: PDF → Text → MySQL (`qual_docs`).
+* **Begründung** Skript (nicht Notebook), damit unbeaufsichtigt per Cron / CI startbar.
+* **Technik** PyPDF2-Parsing, `sqlalchemy+pymysql`-Insert, `glob`‐Dateiscan.
+* **Fix** SQLAlchemy-URL auf `?charset=utf8mb4` umgestellt.
+
+---
+
+## 7 Installation **PyCryptodome**
+
+* **Ziel** Unterstützung für AES-verschlüsselte PDFs (PyPDF2-Requirement).
+* **Ergebnis** `pip install pycryptodome` – keine Fehler.
+
+---
+
+## 8 Installation **ipywidgets**
+
+* **Ziel** Interaktive Datei-Uploads direkt im Notebook.
+* **Begründung** Jupyter-natives Widget, kein externes Front-End nötig.
+* **Ergebnis** `pip install ipywidgets` erfolgreich; VS Code unterstützt Widgets sofort.
+
+---
+
+## Upload-Widget & Bereitstellung (fortgeschrittene Schritte)
+
+9. **scripts/__init__.py angelegt**  
+   - macht das Verzeichnis *scripts* als Python-Paket importierbar.
+
+10. **Notebook *notebooks/widgets/upload_widget.ipynb* erstellt**  
+    - Upload-Button (ipywidgets 8) + Sofort-Ingestion in `qual_docs`.  
+    - Pfad-Fix:  
+      ```python
+      sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+      ```
+
+11. **Event-Handler für ipywidgets 8 angepasst**  
+    - `change["new"]` liefert ein *Tuple* → kein `.items()` mehr.
+
+12. **Minimaler, aufgeräumter Widget-Code eingeführt**  
+    - zwei Zellen genügen: *Setup & Widget*, *optional: Dateiliste*.  
+    - Erfolgs­meldung: **🚀 Upload & Ingestion fertig.**
+
+13. **Kurzer Listing-Snippet**  
+    ```python
+    for p in PDF_DIR.glob("*.pdf"):
+        print(" -", p.name)
+    ```
+
+14. **Daten­bereitstellung für den Dozenten geklärt**  
+    - Empfehlung: *Starter-Paket* → SQL-Seed + Beispiel-PDFs werden beim ersten `docker compose up` automatisch importiert.  
+    - Alternative Wege (ZIP-Volume, Managed Cloud-DB) kurz erläutert.
+
+
