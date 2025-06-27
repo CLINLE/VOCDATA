@@ -4,6 +4,8 @@ Starter repository for my master thesis.
 Masterarbeit Claudia Ledenig (ZHAW)
 
 ## 1 Überblick
+Die Arbeit beweist den Mehrwert eines integrativen Datensystems (qualitative und quantitative daten) anhand einer effizienteren Auswertung von Berufsbildungsdaten, konkret **Lehrvertrags­abbrüchen**.  
+
 Dieses Repository enthält aktuell den vollständigen, reproduzierbaren **ETL-Prozess** für zwei amtliche Datensätze des Bundesamts für Statistik (BFS):
 
 1. **Lehrvertragsauflösungen (LVA) – Kohorte 2019**  
@@ -17,24 +19,23 @@ Alle Schritte sind in Jupyter-Notebooks dokumentiert und versioniert.
 ---
 
 ## 2 Ordnerstruktur 
-├─ data/ # harmonisierte Excel-Quellen
-│ ├─ bfs_data_lva.xlsx
-│ └─ bfs_data_abschlussquote.xlsx
-├─ notebooks/
-│ ├─ a_profile/ # reine Lese-Notebooks (Datenprofiling)
-│ │ ├─ 02_profile_bfs_lva.ipynb
-│ │ └─ 03_profile_bfs_abschlussquote.ipynb
-│ ├─ b_ETL/ # schreibt in MySQL
-│ │ ├─ 04_load_dims.ipynb # 13 Dimensionstabellen
-│ │ ├─ 05_load_facts.ipynb # fact_lva_stats
-│ │ └─ 08_load_fact_abschluss_stats.ipynb
-│ └─ c_sandbox/ # PoC & Tests
-│ └─ 01_poc_overview.ipynb
-├─ docs/
-│ ├─ diagramme/erm_v1.png # exportiertes ER-Diagramm
-│ └─ README_Methodik.md # Kapitel-Entwurf für die Thesis
-└─ z_doku
+vocdata/
+├─ data/ # Roh- & Staging-Daten (.xlsx, .csv, .parquet, …)
+│ └─ .gitkeep
+├─ etl/ # Python-Skripte für Lade- & Update-Jobs
+│ ├─ 05_load_facts_lva.py
+│ ├─ 06_load_abschluss_stats.py
+│ └─ 08_fk_updates.py
+├─ notebooks/ # Explorative Analysen & Data-Quality
+│ ├─ 01_poc_overview.ipynb
+│ └─ 09_c_quality_audits.ipynb
+├─ .env.example # DB-Credentials (niemals committen!)
+├─ requirements.txt
+└─ README.md
 
+yaml
+Kopieren
+Bearbeiten
 
 
 
