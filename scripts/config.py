@@ -8,3 +8,5 @@ import os
 
 load_dotenv(find_dotenv())          # .env laden, egal von wo gestartet
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_KEY = OPENAI_KEY    # Alias – beide Namen verfügbar
+

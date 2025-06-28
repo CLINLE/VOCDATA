@@ -290,4 +290,21 @@ CREATE TABLE IF NOT EXISTS vocdata.qual_docs (
 24. **Pytest in Conda-Env ausgeführt**  
     Verhindert Modul­fehler (`pymysql`) durch falschen Interpreter.
 
+### Suche & Auswahl-Widget (Notebook)
+
+25. **Notebook `search_widget.ipynb` angelegt**  
+    - Pfad-Fix (`sys.path.insert`) ergänzt.  
+    - Importiert jetzt  
+      ```python
+      from chatgpt_integration.search_widget import search
+      from chatgpt_integration.summarize_widget import summarize
+      ```
+
+26. **Fehlerbehebung**  
+    - Module `search_widget.py` und `summarize_widget.py` liegen unter `scripts/chatgpt_integration/`.  
+    
+      ```  
+      brauchen noch lösung so dass kein `ModuleNotFoundError: scripts.config` mehr auftritt.
+
+
 
