@@ -1,3 +1,8 @@
+"""
+Liest alle PDFs im Ordner uploads/pdf/, extrahiert deren Text mit PyPDF2
+und schreibt ihn (falls neu) in die MySQL-Tabelle `qual_docs`.
+Aufruf: python scripts/pdf_upload/ingest.py
+"""
 # scripts/pdf_ingest.py
 import os
 from glob import glob
