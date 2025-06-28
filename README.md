@@ -236,4 +236,58 @@ CREATE TABLE IF NOT EXISTS vocdata.qual_docs (
     - Empfehlung: *Starter-Paket* → SQL-Seed + Beispiel-PDFs werden beim ersten `docker compose up` automatisch importiert.  
     - Alternative Wege (ZIP-Volume, Managed Cloud-DB) kurz erläutert.
 
+### OpenAI-Integration & Code-Struktur
+
+15. **scripts/config.py** erstellt  
+    - Lädt `.env`, stellt `OPENAI_KEY` zentral bereit.
+
+16. **.env** im Projektstamm angelegt (nicht im Repo):  
+    `OPENAI_API_KEY=sk-…`
+
+17. **Ordnerstruktur verfeinert**  
+    ```
+    scripts/
+    ├─ pdf_upload/ingest.py        # ETL für PDFs
+    └─ chatgpt_config/summarize_pdf_files.py
+    ```
+    `__init__.py` in allen Unterordnern, damit Python-Pakete.
+
+18. **summarize_pdf_files.py** (neue OpenAI v1-Syntax)  
+    - Funktion `summarize(doc_id)` holt Volltext aus `qual_docs`, ruft `gpt-4o-mini` auf, liefert 8-Satz-Summary.
+
+19. **Bibliothek aktualisiert:** `pip install --upgrade openai python-dotenv`
+
+20. **Funktions­test:**  
+    ```powershell
+    python -c "from scripts.chatgpt_config.summarize_pdf_files import summarize; print(summarize(1)[:400])"
+    ```  
+    → Zusammenfassung erscheint ⇒ Integration erfolgreich.
+
+### Volltext-Suche & Unit-Tests
+
+21. **FULLTEXT-Index angelegt**  
+    ```sql
+    ALTER TABLE qual_docs
+    ADD FULLTEXT idx_full_text (full_text);
+    ```
+
+22. **search-Modul erstellt**  
+    *scripts/chatgpt_config/search.py*  
+    ```python
+    def search(term, limit=20):
+        SELECT doc_id, filename,
+               SUBSTRING(full_text,1,300) AS snippet
+        FROM qual_docs
+        WHERE MATCH(full_text) AGAINST (:q IN NATURAL LANGUAGE MODE)
+        LIMIT :lim
+    ```
+
+23. **Test-Infrastruktur eingerichtet**  
+    - Ordner **tests/** auf Root-Ebene  
+    - `test_summarize.py` mit Pfad-Fix + `assert summarize(1)`  
+    - Aufruf: `python -m pytest -q` → **1 passed**
+
+24. **Pytest in Conda-Env ausgeführt**  
+    Verhindert Modul­fehler (`pymysql`) durch falschen Interpreter.
+
 

@@ -1,0 +1,8 @@
+Beispielabfrage
+
+powershell
+python -c 
+
+"from scripts.chatgpt_config.summarize_pdf_files import summarize; print(summarize(1))"
+
+alternativ, wenn man nur die ersten 400 Zeichen sehen wollen würde: "from scripts.chatgpt_config.summarize_pdf_files import summarize; print(summarize(1)[:400])"
