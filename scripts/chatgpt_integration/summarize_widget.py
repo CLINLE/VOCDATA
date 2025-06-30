@@ -26,7 +26,7 @@ def summarize(doc_id: int) -> str:
     ).iloc[0, 0][:12000]          # max 12 k Tokens
 
     resp = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-4.1",
         messages=[
             {"role": "system",
              "content": "Fasse den folgenden deutschen Fachtext in max. 8 Sätzen zusammen."},

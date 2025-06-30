@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  vocdata:
+    image: mcr.microsoft.com/devcontainers/python:0-3.11
+    volumes:
+      - .:/workspace            # Projektcode
+      - mysql_data:/var/lib/mysql
+      - uploads_pdf:/workspace/uploads/pdf
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    command: sleep infinity     # Container bleibt idle; VS Code / bash attachen
+
+volumes:
+  mysql_data:
+  uploads_pdf:

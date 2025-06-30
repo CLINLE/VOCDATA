@@ -308,3 +308,97 @@ CREATE TABLE IF NOT EXISTS vocdata.qual_docs (
 
 
 
+Notes Search funktion 2 Level
+1.  Suche (search(term)) – reines SQL / FTS in MySQL (Läuft lokal in der DB-Engine.)
+2. Kontext → LLM – Ausschnitte (snippet oder full_text[:12000]) werden zusammen mit der User-Frage an gpt-4o-mini geschickt (RAG-Aufruf, summarize() etc.)
+
+Ablauf
+Suchergebnis → Prompt
+search() findet relevante Textstellen, z. B. 3 × 400 Wörter.
+Diese Ausschnitte wandern in den System-/Kontext-Teil der Chat-Nachricht.
+
+Promptlänge = Tokenverbrauch
+Je mehr Treffer / längere Ausschnitte, desto mehr Input-Tokens.
+Jeder zusätzliche Token kostet (Stand Juni 2025) z. B.
+gpt-4o-mini: USD 0.0005 pro 1 k Input-Token, USD 0.0015 pro 1 k Output-Token.
+
+
+--> Kosten steuern
+Truncate lange Treffer ([:4000] oder SUBSTRING), wie in summarize()
+Limit Anzahl Treffer (limit=5).
+Dedup identische Stellen, wenn mehrere Suchbegriffe dasselbe Dokument liefern.
+
+Weitere Kosten:
+summarize(doc_id) (12 k Zeichen ≈ 1.8 k Tokens) + 120 Antwort-Tokens ≈ 1 900 typische Token ~ USD 0.003
+RAG-Chat: 3 × 300 Wörter Kontext (≈ 750 Tokens) + Frage (50 Tokens) + Antwort (150 Tokens) ≈ 950 ~ USD 0.0014
+https://platform.openai.com/docs/guides/production-best-practices/example-procedure-for-evaluating-a-gpt-3-based-system?utm_source=chatgpt.com
+
+````markdown
+## 🚀 Quick Start
+
+> **Voraussetzungen**  
+> – Docker Desktop ≥ 4.x  
+> – Git  
+> – eigener OpenAI API-Key
+
+```bash
+# 1. Repository klonen
+git clone https://github.com/<your-org>/vocdata.git
+cd vocdata
+
+# 2. API-Key setzen
+cp .env.example .env        # Datei anlegen
+# ⇒ OPENAI_API_KEY=<dein_Key> in .env eintragen
+
+# 3. Stack starten
+docker compose up -d        # baut Image & startet Container
+````
+
+**Öffnen:** [http://localhost:8888](http://localhost:8888)
+*(Login-Token steht im Container-Log `docker compose logs -f app`.)*
+
+---
+
+## 🔧 Was passiert beim ersten Start?
+
+| Container               | Aufgabe                                                       | Persistenz                |
+| ----------------------- | ------------------------------------------------------------- | ------------------------- |
+| **db** (`mysql:8.4`)    | legt Schema an, zieht `seed/schema.sql` + `seed/seed.sql` ein | Volume `db_data`          |
+| **app** (lokales Build) | installiert Pakete, startet Jupyter Lab :8888                 | Bind-Mount `uploads/pdf/` |
+
+*Die ETL-Pipeline extrahiert Demo-PDFs direkt beim Seed-Import, sodass Dashboards und RAG sofort Daten liefern.*
+
+---
+
+## 🛠️ Häufige Kommandos
+
+```bash
+docker compose ps                  # Container-Status
+docker compose logs -f app         # Live-Log Jupyter Lab
+docker compose exec db \
+  mysql -uroot -pvoc_root vocdata \
+  -e "SHOW TABLES;"                # kurzer DB-Check
+docker compose down                # Stack stoppen (Volumes bleiben)
+```
+
+---
+
+## 📂 Verzeichnisstruktur (Auszug)
+
+```text
+vocdata/
+├─ scripts/                # Python-Code (ETL, RAG, Adapter)
+├─ notebooks/              # Dashboards & Widgets
+├─ seed/
+│   ├─ schema.sql          # DDL
+│   ├─ seed.sql            # Demo-Kennzahlen
+│   └─ demo_pdfs/          # kleine Beispiel-PDFs
+├─ uploads/pdf/            # eigene PDF-Uploads  (ignored)
+└─ docker-compose.yml
+```
+
+> **Tipp:**
+> *`docker compose down -v`* entfernt Container **und** Volumes, falls Sie komplett neu starten möchten.
+
+```
+```
